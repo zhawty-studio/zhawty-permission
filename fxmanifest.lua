@@ -6,8 +6,6 @@ description "Zhawty Studio Resource Boilerplate"
 author "Zhawty & Snow"
 version "1.0.0"
 
-ui_page 'web/build/index.html'
-
 lua54 ''
 
 shared_script {
@@ -20,9 +18,4 @@ client_script {
 
 server_scripts {
 	'server/*.lua'
-}
-
-files {
-	'web/build/*',
-	'web/build/**/*',
 }
