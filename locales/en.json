@@ -1,0 +1,6 @@
+{
+    "money_symbol": "$",
+    "notify_title": "Payday",
+    "recive_payday": "You recived ${money_symbol}%s from payday!",
+    "executing_event": "Trying execute payday event"
+}

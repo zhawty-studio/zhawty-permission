@@ -1,0 +1,7 @@
+{
+    "money_symbol": "$",
+    "notify_title": "Sálario",
+    "recive_payday": "Você recebeu ${money_symbol}%s pelo salário!",
+    "executing_event": "Tentando executar evento de salário",
+    "menu_title": "Menu de permissões"
+}
