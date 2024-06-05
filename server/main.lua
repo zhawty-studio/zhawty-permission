@@ -30,7 +30,10 @@ function Permissions:LoadConfig()
     self.config = {}
     local rows = Main:Query('Permissions:GetConfig')
     for k, v in pairs(rows) do 
-        self.config[v.index] = json.decode(v.salarys) or {}
+        self.config[v.index] = {
+            salarys = json.decode(v.salarys) or {},
+            parents = json.decode(v.parents) or {}
+        }
     end
     lib.print.info('Permissions loaded:', #rows)
 end
@@ -41,7 +44,7 @@ function Permissions:Add(userId, index, hierarchy)
     permissions[index] = { 
         hierarchy = tonumber(hierarchy),
         status = true, 
-        salary = (tonumber(hierarchy) and (self.config[index] or {})[tostring(hierarchy)] or false)
+        salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
     }
     
     if source then
@@ -66,7 +69,7 @@ function Permissions:Update(userId, index, hierarchy)
 
     if permissions[index] then 
         permissions[index].hierarchy = hierarchy
-        permissions[index].salary = hierarchy and (self.config[index] or {})[tostring(hierarchy)] or false
+        permissions[index].salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
     end
 
     if source then
@@ -89,8 +92,20 @@ function Permissions:Reload(userId)
 end
 
 function Permissions:Has(userId, index, hierarchy)
+    local source = Functions.getUserSource(userId)
     local permission = self:Get(userId, index)
-    return permission and ((permission.hierarchy or -1) >= (hierarchy or 0)) or false 
+    local hasPermission = permission and ((permission.hierarchy or -1) >= (hierarchy or 0)) 
+    local hasParent = false
+    if self.config[index] then 
+        local parents = self.config[index].parents or {}
+        for indexParent in pairs(parents) do 
+            if self:Get(userId, index) then
+                hasParent = true
+                break
+            end
+        end
+    end
+    return hasPermission or hasParent or (source and IsPlayerAceAllowed(source, index))
 end
 
 function Permissions:Payday(source)
@@ -98,7 +113,7 @@ function Permissions:Payday(source)
     local permissions = self:Get(userId)
 
     if self.timer[tostring(userId)] then 
-        if os.time() < self.timer[tostring(userId)] then TriggerEvent('zhawty-permission:suspectPlayer', userId, locale('executing_event')) return end
+        if os.time() < self.timer[tostring(userId)] then TriggerEvent('zhawty-permission:suspectPlayer', source, locale('executing_event')) return end
     end
 
     self.timer[tostring(userId)] = (os.time() + ((Config.Payday.Timer or 10) * 60))
@@ -139,5 +154,5 @@ RegisterCommand(Config.Commands.panel.name, function(source)
 end)
 
 exports('Has', function(userId, index, hierarchy)
-    return Permission:Has(userId, index, hierarchy)
+    return Permissions:Has(userId, index, hierarchy)
 end)

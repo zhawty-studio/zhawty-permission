@@ -8,7 +8,7 @@ Config = {
             name = 'permissions',
             canExecute = function(source)
                 local userId = Functions.getUserId(source)
-                return true--exports[GetCurrentResourceName()]:Has(userId, 'god')
+                return exports[GetCurrentResourceName()]:Has(userId, 'admin')
             end
         },
         addPermission = {
