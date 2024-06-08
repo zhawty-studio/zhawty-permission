@@ -28,7 +28,7 @@ function Functions.getUserSource(citizenid)
 end
 
 AddEventHandler('zhawty-permissions:reciveSalary', function(userId, index, amount)
-    lib.print.sucess(userId, index, amount)
+    lib.print.info(userId, index, amount)
 end)
 
 AddEventHandler('zhawty-permission:suspectPlayer', function(source, reason)

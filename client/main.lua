@@ -34,14 +34,62 @@ RegisterNetEvent('zhawty-permissions:update', function(data)
     User.permissions = data
 end)
 
+function User:ManageMenu(index, citizenid)
+    lib.registerContext({
+        id = 'permissions_'..index..'_user_manage',
+        title = locale('menu_title')..': '..index,
+        menu = 'permissions_'..index..'_users',
+        options = {
+            {
+                title = 'Alterar',
+                serverEvent = ''
+            },
+            {
+                title = 'Remover',
+                serverEvent = ''
+            }
+        }
+    })
+    lib.showContext('permissions_'..index..'_user_manage')
+end
+
+function User:GetUsersByPermission(index)
+    local users = lib.callback.await('zhawty-permissions:getUsersByPermission', 100, index)
+    local options = {}
+    for _, user in pairs(users) do
+        options[#options + 1] = {
+            title = user.text,
+            onSelect = function()
+                User:ManageMenu(index, user.citizenid)
+            end
+        }
+    end
+    lib.registerContext({
+        id = 'permissions_'..index..'_users',
+        title = locale('menu_title')..': '..index,
+        menu = 'permissions_'..index,
+        options = options
+    })
+
+    lib.showContext('permissions_'..index..'_users')
+end
+
 function User:RegisterPainelContext()
-    local permissions = lib.callback.await('zhawty-permissions:getPermissionsConfig')
+    local permissions = Config.Permissions
     local options = {}
     local permissionOptions = {}
 
     for index, v in pairs(permissions) do
         if not permissionOptions[index] then 
-            permissionOptions[index] = {}
+            permissionOptions[index] = {
+                {
+                    title = 'Ver usuários setados',
+                    arrow = true,
+                    onSelect = function()
+                        User:GetUsersByPermission(index)
+                    end
+                }
+            }
         end 
 
         local _permissionOptions = permissionOptions[index]
@@ -53,10 +101,9 @@ function User:RegisterPainelContext()
             end
         }
 
-        for level, salary in pairs(v) do 
+        for level, salary in pairs(v.salarys) do 
             _permissionOptions[#_permissionOptions+1] = {
                 title = 'Level: '..level..' Salário: '..locale('money_symbol')..salary,
-                arrow = true,
             }
         end
     end

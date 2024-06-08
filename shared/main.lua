@@ -23,5 +23,13 @@ Config = {
                 
             end
         }
+    },
+    Permissions = {
+        ['teste'] = {
+            salarys = {
+                ['0'] = 200
+            },
+            parents = {}
+        }
     }
 }

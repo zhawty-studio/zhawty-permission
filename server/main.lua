@@ -1,6 +1,6 @@
 local Permissions = {
     cache = {},
-    config = {},
+    config = Config.Permissions,
     timer = {}
 }
 
@@ -25,18 +25,11 @@ function Main:Query(index, params)
     return Citizen.Await(wait)
 end
 
-Main:Prepare('Permissions:GetConfig', 'SELECT * FROM zhawty_permissions')
-function Permissions:LoadConfig()
-    self.config = {}
-    local rows = Main:Query('Permissions:GetConfig')
-    for k, v in pairs(rows) do 
-        self.config[v.index] = {
-            salarys = json.decode(v.salarys) or {},
-            parents = json.decode(v.parents) or {}
-        }
-    end
-    lib.print.info('Permissions loaded:', #rows)
-end
+Main:Prepare('Get', 'SELECT * FROM `player_permissions` WHERE citizenid = @citizenid')
+Main:Prepare('GetAll', 'SELECT citizenid, hierarchy FROM `player_permissions` WHERE `index` = @index')
+Main:Prepare('Add', 'INSERT INTO `player_permissions` (citizenid, `index`, hierarchy) VALUES (@userId, @index, @hierarchy)')
+Main:Prepare('Remove', 'DELETE FROM `player_permissions` WHERE citizenid = @userId AND `index` = @index')
+Main:Prepare('Update', 'UPDATE `player_permissions` SET hierarchy = @hierarchy WHERE citizenid = @userId AND `index` = @index')
 
 function Permissions:Add(userId, index, hierarchy)
     local source = Functions.getUserSource(userId)
@@ -46,6 +39,16 @@ function Permissions:Add(userId, index, hierarchy)
         status = true, 
         salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
     }
+
+    if not permissions[index] then
+        Main:Query('Add', {
+            userId = userId,
+            index = index,
+            hierarchy = hierarchy
+        })
+    else
+        self:Update(userId, index, hierarchy)
+    end
     
     if source then
         lib.addPrincipal('player.'..source, 'group.'..index)
@@ -57,6 +60,12 @@ function Permissions:Remove(userId, index)
     local source = Functions.getUserSource(userId)
     local permissions = self:Get(userId)
     permissions[index] = nil
+
+    Main:Query('Remove', {
+        userId = userId,
+        index = index
+    })
+
     if source then
         lib.removePrincipal('player.'..source, 'group.'..index)
         TriggerClientEvent('zhawty-permissions:update', source, permissions)
@@ -68,6 +77,11 @@ function Permissions:Update(userId, index, hierarchy)
     local permissions = self:Get(userId)
 
     if permissions[index] then 
+        Main:Query('Update', {
+            userId = userId,
+            index = index,
+            hierarchy = hierarchy
+        })
         permissions[index].hierarchy = hierarchy
         permissions[index].salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
     end
@@ -79,7 +93,25 @@ end
 
 function Permissions:Get(userId, index)
     if not self.cache[tostring(userId)] then
+        local source = Functions.getUserSource(userId)
+        local rows = Main:Query('Get', {
+            userId = userId
+        })
+
         self.cache[tostring(userId)] = {}
+
+        for _, v in pairs(rows) do
+            self.cache[tostring(userId)][v.index] =  { 
+                hierarchy = tonumber(v.hierarchy),
+                status = true, 
+                salary = (tonumber(v.hierarchy) and ((self.config[v.index] or {}).salarys or {})[tostring(v.hierarchy)] or false)
+            }
+
+            if source then
+                lib.addPrincipal('player.'..source, 'group.'..index) 
+            end
+        end
+        TriggerClientEvent('zhawty-permissions:update', source, self.cache[tostring(userId)])
     end
     return index and self.cache[tostring(userId)][index] or self.cache[tostring(userId)]
 end
@@ -134,11 +166,26 @@ end)
 
 SetTimeout(0, function()
     lib.locale()
-    Permissions:LoadConfig()  
 end)
 
 lib.callback.register('zhawty-permissions:getPermissionsConfig', function(source)
     return Permissions.config
+end)
+
+lib.callback.register('zhawty-permissions:getUsersByPermission', function(source, index)
+    if not Config.Commands.panel.canExecute(source) then return {} end
+    local users = Main:Query('GetAll', {
+        index = index or 'null'
+    })
+    local formated = {}
+    for _, user in pairs(users) do 
+        local isOnline = Functions.getUserSource(user.citizenid)
+        formated[#formated + 1] = {
+            citizenid = user.citizenid,
+            text = (isOnline and '🟢 Source: '..isOnline or '🔴 Source: offline')..' | Id: '..user.citizenid..' | Level: '..user.hierarchy
+        }
+    end
+    return formated
 end)
 
 RegisterCommand('teste', function(source)
