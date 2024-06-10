@@ -8,23 +8,35 @@ function Functions.getUserId(source)
     return player.PlayerData.citizenid
 end
 
-function Functions.giveMoney(citizenid, amount, reason)
-    local player = Core:GetPlayerByCitizenId(citizenid)
+function Functions.giveMoney(userId, amount, reason)
+    local player = Core:GetPlayerByCitizenId(userId)
     if not player then return end
     player.Functions.AddMoney('bank', amount, reason)
 end
 
-function Functions.getUserJob(citizenid)
-    local player = Core:GetPlayerByCitizenId(citizenid)
+function Functions.getUserJob(userId)
+    local player = Core:GetPlayerByCitizenId(userId)
     if not player then return end
     local jobData = player.PlayerData.job
     return jobData.onduty and jobData.name or false
 end
 
-function Functions.getUserSource(citizenid)
-    local player = Core:GetPlayerByCitizenId(citizenid)
+function Functions.getUserSource(userId)
+    local player = Core:GetPlayerByCitizenId(userId)
     if not player then return end
     return player.PlayerData.source
+end
+
+function Functions.canRemovePermission(staffId, userId, index)
+    return true
+end
+
+function Functions.canChangeLevel(staffId, userId, index, newLevel)
+    return true
+end
+
+function Functions.canAddPermission(staffId, userId, index, level)
+    return true
 end
 
 AddEventHandler('zhawty-permissions:reciveSalary', function(userId, index, amount)

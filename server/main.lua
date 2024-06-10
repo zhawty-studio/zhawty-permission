@@ -25,7 +25,7 @@ function Main:Query(index, params)
     return Citizen.Await(wait)
 end
 
-Main:Prepare('Get', 'SELECT * FROM `player_permissions` WHERE citizenid = @citizenid')
+Main:Prepare('Get', 'SELECT * FROM `player_permissions` WHERE citizenid = @userId')
 Main:Prepare('GetAll', 'SELECT citizenid, hierarchy FROM `player_permissions` WHERE `index` = @index')
 Main:Prepare('Add', 'INSERT INTO `player_permissions` (citizenid, `index`, hierarchy) VALUES (@userId, @index, @hierarchy)')
 Main:Prepare('Remove', 'DELETE FROM `player_permissions` WHERE citizenid = @userId AND `index` = @index')
@@ -34,11 +34,6 @@ Main:Prepare('Update', 'UPDATE `player_permissions` SET hierarchy = @hierarchy W
 function Permissions:Add(userId, index, hierarchy)
     local source = Functions.getUserSource(userId)
     local permissions = self:Get(userId)
-    permissions[index] = { 
-        hierarchy = tonumber(hierarchy),
-        status = true, 
-        salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
-    }
 
     if not permissions[index] then
         Main:Query('Add', {
@@ -49,6 +44,12 @@ function Permissions:Add(userId, index, hierarchy)
     else
         self:Update(userId, index, hierarchy)
     end
+
+    permissions[index] = { 
+        hierarchy = tonumber(hierarchy),
+        status = true, 
+        salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
+    }
     
     if source then
         lib.addPrincipal('player.'..source, 'group.'..index)
@@ -108,16 +109,22 @@ function Permissions:Get(userId, index)
             }
 
             if source then
-                lib.addPrincipal('player.'..source, 'group.'..index) 
+                lib.addPrincipal('player.'..source, 'group.'..v.index) 
             end
         end
-        TriggerClientEvent('zhawty-permissions:update', source, self.cache[tostring(userId)])
+        if source then
+            TriggerClientEvent('zhawty-permissions:update', source, self.cache[tostring(userId)])
+        end
     end
     return index and self.cache[tostring(userId)][index] or self.cache[tostring(userId)]
 end
 
 function Permissions:Reload(userId)
     local source = Functions.getUserSource(userId)
+
+    self.cache[tostring(userId)] = nil 
+    self:Get(userId)
+
     if source then
         TriggerClientEvent('zhawty-permissions:update', source, self.cache[tostring(userId)])
     end
@@ -172,6 +179,12 @@ lib.callback.register('zhawty-permissions:getPermissionsConfig', function(source
     return Permissions.config
 end)
 
+lib.callback.register('zhawty-permissions:getUserPermissions', function(source, userId)
+    if not Config.Commands.manageUser.canExecute(source) then return {} end
+    local permissions = Permissions:Get(userId) or {}
+    return permissions
+end)
+
 lib.callback.register('zhawty-permissions:getUsersByPermission', function(source, index)
     if not Config.Commands.panel.canExecute(source) then return {} end
     local users = Main:Query('GetAll', {
@@ -182,10 +195,71 @@ lib.callback.register('zhawty-permissions:getUsersByPermission', function(source
         local isOnline = Functions.getUserSource(user.citizenid)
         formated[#formated + 1] = {
             citizenid = user.citizenid,
+            status = isOnline,
             text = (isOnline and '🟢 Source: '..isOnline or '🔴 Source: offline')..' | Id: '..user.citizenid..' | Level: '..user.hierarchy
         }
     end
     return formated
+end)
+
+RegisterNetEvent('zhawty-permissions:remove', function(data)
+    local source = source 
+    local staffId = Functions.getUserId(source)
+
+    if not staffId then return end
+    if not Config.Commands.remPermission.canExecute(source) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    local userId, index = data.userId, data.index
+    if not (userId or index) then return end
+
+    if not Functions.canRemovePermission(staffId, userId, index) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    Permissions:Remove(userId, index)
+    TriggerClientEvent('zhawty-permissions:notify', source, 'Sucess', locale('removed'), 'info')
+end)
+
+RegisterNetEvent('zhawty-permissions:reload', function(data)
+    local source = source 
+    local staffId = Functions.getUserId(source)
+
+    if not staffId then return end
+    if not Config.Commands.panel.canExecute(source) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    local userId = data.userId
+    if not (userId) then return end
+
+    Permissions:Reload(userId)
+    TriggerClientEvent('zhawty-permissions:notify', source, 'Sucess', locale('reloaded'), 'info')
+end)
+
+RegisterNetEvent('zhawty-permissions:change', function(userId, index, newLevel)
+    local source = source
+    local staffId = Functions.getUserId(source)
+
+    if not staffId then return end
+    if not Config.Commands.addPermission.canExecute(source) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    if not (userId or index or newLevel) then return end
+
+    if not Functions.canChangeLevel(staffId, userId, index) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    Permissions:Update(userId, index, newLevel)
+    TriggerClientEvent('zhawty-permissions:notify', source, 'Sucess', locale('changed'), 'info')
+end)
+
+RegisterNetEvent('zhawty-permissions:add', function(userId, index, level)
+    local source = source
+    local staffId = Functions.getUserId(source)
+
+    if not staffId then return end
+    if not Config.Commands.addPermission.canExecute(source) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    if not (userId or index or level) then return end
+
+    if not Functions.canAddPermission(staffId, userId, index) then TriggerClientEvent('zhawty-permissions:notify', source, 'Error', locale('cant_execute'), 'error') return end
+
+    Permissions:Add(userId, index, level)
+    TriggerClientEvent('zhawty-permissions:notify', source, 'Sucess', locale('added'), 'info')
 end)
 
 RegisterCommand('teste', function(source)
@@ -195,10 +269,34 @@ RegisterCommand('teste', function(source)
     Permissions:Payday(source)
 end)
 
-RegisterCommand(Config.Commands.panel.name, function(source)
-    if not Config.Commands.panel.canExecute(source) then return end
-    TriggerClientEvent('zhawty-permissions:openPanel', source)
-end)
+if Config.Commands.panel then
+    RegisterCommand(Config.Commands.panel.name, function(source)
+        if not Config.Commands.panel.canExecute(source) then return end
+        TriggerClientEvent('zhawty-permissions:openPanel', source)
+    end)
+end
+
+if Config.Commands.addPermission then
+    RegisterCommand(Config.Commands.addPermission.name, function(source)
+        if not Config.Commands.addPermission.canExecute(source) then return end
+        TriggerClientEvent('zhawty-permissions:openPanel', source, 'addPermission')
+    end)
+end
+
+if Config.Commands.remPermission then
+    RegisterCommand(Config.Commands.remPermission.name, function(source)
+        if not Config.Commands.remPermission.canExecute(source) then return end
+        TriggerClientEvent('zhawty-permissions:openPanel', source, 'remPermission')
+    end)
+end
+
+if Config.Commands.manageUser then
+    RegisterCommand(Config.Commands.manageUser.name, function(source, args)
+        local userId = tonumber(args[1])
+        if not Config.Commands.manageUser.canExecute(source) then return end
+        TriggerClientEvent('zhawty-permissions:openPanel', source, 'manageUser', userId)
+    end)
+end
 
 exports('Has', function(userId, index, hierarchy)
     return Permissions:Has(userId, index, hierarchy)
