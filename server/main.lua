@@ -48,7 +48,8 @@ function Permissions:Add(userId, index, hierarchy)
     permissions[index] = { 
         hierarchy = tonumber(hierarchy),
         status = true, 
-        salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
+        salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false),
+        label = (tonumber(hierarchy) and ((self.config[index] or {}).hierarchy or {})[tostring(hierarchy)] or false)
     }
     
     if source then
@@ -85,6 +86,7 @@ function Permissions:Update(userId, index, hierarchy)
         })
         permissions[index].hierarchy = hierarchy
         permissions[index].salary = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
+        permissions[index].label = (tonumber(hierarchy) and ((self.config[index] or {}).salarys or {})[tostring(hierarchy)] or false)
     end
 
     if source then
@@ -300,4 +302,24 @@ end
 
 exports('Has', function(userId, index, hierarchy)
     return Permissions:Has(userId, index, hierarchy)
+end)
+
+exports('Get', function(userId, index)
+    return Permissions:Get(userId, index)
+end)
+
+exports('Add', function(userId, index, hierarchy)
+    return Permission:Add(userId, index, hierarchy)
+end)
+
+exports('Remove', function(userId, index)
+    return Permission:Remove(userId, index)
+end)
+
+exports('Reload', function(userId)
+    return Permission:Reload(userId)
+end)
+
+exports('Update', function(userId, index, hierarchy)
+    return Permission:Update(userId, index, hierarchy)
 end)

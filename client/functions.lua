@@ -1,8 +1,11 @@
 Functions = {}
 
+---@param title string | nil
+---@param description string | nil  
+---@param type string | nil
 function Functions.notify(title, description, type)
     lib.notify({
-        title = title,
+        -- title = title,
         description = description,
         type = type
     })

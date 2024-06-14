@@ -52,23 +52,27 @@ function User:ManageUser(userId)
     local options = { 
         {
             title = locale('reload'),
+            icon = 'arrows-rotate',
             serverEvent = 'zhawty-permissions:reload',
             args = { userId = userId }
         },
         {
             title = locale('remove_permission'),
+            icon = 'trash',
             onSelect = function()
                 User:RemovePermissionMenu(permissions, userId)
             end
         },
         {
             title = locale('add_permission'),
+            icon = 'plus',
             onSelect = function()
                 User:AddPermissionMenu(userId)
             end
         },
         {
             title = locale('view_permissions'),
+            icon = 'eye',
             onSelect = function()
                 lib.registerContext({
                     id = id..'_view',
@@ -176,17 +180,20 @@ function User:ManageMenu(index, citizenid, text, menu)
         options = {
             {
                 title = locale('change_permission'),
+                icon = 'right-left',
                 onSelect = function()
                     User:ChangePermissionMenu(citizenid, index)
                 end
             },
             {
-                title = locale('remove_permission'),
+                title = locale('remove_permission'),    
+                icon = 'trash',
                 serverEvent = 'zhawty-permissions:remove',
                 args = { userId = citizenid, index = index }
             },
             {
                 title = locale('reload'),
+                icon = 'plus',
                 serverEvent = 'zhawty-permissions:reload',
                 args = { userId = citizenid }
             }
@@ -231,6 +238,7 @@ function User:RegisterPainelContext()
             permissionOptions[index] = {
                 {
                     title = locale('see_users'),
+                    icon = 'users',
                     arrow = true,
                     onSelect = function()
                         User:GetUsersByPermission(index)
