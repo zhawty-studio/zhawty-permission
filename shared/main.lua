@@ -1,7 +1,6 @@
 Config = {
     Payday = {
-        Timer = 10,
-        Job = true
+        Timer = 10
     },
     Commands = {
         panel = {
@@ -50,3 +49,5 @@ Config = {
         }
     }
 }
+
+Config.license = 'DcU1L-M9YbOYp7oQ-jet62'

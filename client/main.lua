@@ -17,6 +17,11 @@ function User:Unload()
     self.status = false
 end
 
+AddEventHandler('zs-loaded:zhawty-permission', function()
+    lib.locale()
+    User:Load()
+end)
+
 AddEventHandler('zhawty-permissions:loadPlayer', function()
     lib.locale()
     User:Load()

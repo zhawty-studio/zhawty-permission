@@ -264,13 +264,6 @@ RegisterNetEvent('zhawty-permissions:add', function(userId, index, level)
     TriggerClientEvent('zhawty-permissions:notify', source, 'Sucess', locale('added'), 'info')
 end)
 
-RegisterCommand('teste', function(source)
-    local userId = Functions.getUserId(source)
-    Permissions:Add(userId, 'teste', 0)
-    Wait(1000)
-    Permissions:Payday(source)
-end)
-
 if Config.Commands.panel then
     RegisterCommand(Config.Commands.panel.name, function(source)
         if not Config.Commands.panel.canExecute(source) then return end
