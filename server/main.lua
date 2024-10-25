@@ -287,7 +287,7 @@ end
 
 if Config.Commands.manageUser then
     RegisterCommand(Config.Commands.manageUser.name, function(source, args)
-        local userId = tonumber(args[1])
+        local userId = args[1]
         if not Config.Commands.manageUser.canExecute(source) then return end
         TriggerClientEvent('zhawty-permissions:openPanel', source, 'manageUser', userId)
     end)
